@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title> This is a title...</title>
+    <title> This is the tab name...</title>
     <script src='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet' />
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.0/mapbox-gl-draw.js"></script>
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.0/mapbox-gl-draw.css" type="text/css">
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'></script>
+
 </head>
 <body style="background-color:darkgray;">
     <h1 style="font-family:Montserrat; color:white;">UTM Map</h1>
     <div id='map' style='width: 400px; height: 300px;'></div>
+    <style>
+
+    </style>
+
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoiYWxpZHVnIiwiYSI6ImNsZGpoanZuazAwaHczcXFrMzBjZnZpbDcifQ.Pk65OCZgC5O4Zq4f7YI86g';
         //Build the map skeleton here
@@ -17,6 +23,7 @@
             container: 'map',
             style: 'mapbox://styles/alidug/cldiebbv4003j01p60bnp4c40',
             center: [148.928054, -20.326101],//long,lat
+            pitch: 60,//0 deg is straight down, 90 is horizon
             zoom: 10.5,//starting zoom
             antialias: true, // create the gl context with MSAA antialiasing, so custom layers are antialiased
             projection: 'mercator'
@@ -37,13 +44,56 @@
             // The user does not have to click the polygon control button first.
             defaultMode: 'draw_polygon'
         });
-        map.addControl(draw);
 
-        map.on('draw.create', updateArea);
-        map.on('draw.delete', updateArea);
-        map.on('draw.update', updateArea);
+        // map.addControl(draw);
+
+
+        //add drone ... cant make this work yet
+        var loader = new THREE.OBJLoader();
+        loader.load('C:\Users\ali_d\OneDrive\Documents\AliLearnsDjango\drone.obj', function (object) {
+            var material = new THREE.MeshBasicMaterial({ color: 0xff8000 });
+            var mesh = new THREE.Mesh(object.children[0].geometry, material);
+            var coords = [148.928054, -20.326101]; // model's coordinates
+            mesh.position.set(coords[0], coords[1], 100);
+            mesh.scale.set(100, 100, 100); // Replace with your desired scale
+            map.on('render', function () {
+                map.getSource('3d-model').setData(
+                    (new THREE.BufferGeometry()).fromGeometry(mesh.geometry)
+                );
+            });
+        });
+        map.on('load', function () {
+            map.addSource('3d-model', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [] } } });
+            map.addLayer({
+                'id': '3d-model',
+                'type': 'fill-extrusion',
+                'source': '3d-model',
+                'paint': {
+                    'fill-extrusion-color': '#aaa',
+                    'fill-extrusion-height': {
+                        'type': 'identity',
+                        'property': 'height'
+                    },
+                    'fill-extrusion-base': {
+                        'type': 'identity',
+                        'property': 'base_height'
+                    },
+                    'fill-extrusion-opacity': 0.6
+                }
+            });
+        });
+        //fly to drone location
+        document.getElementById('fly').addEventListener('click', () => {
+            // Fly to a random location
+            map.flyTo({
+                center: [148.928054, -20.326101],
+                essential: true // this animation is considered essential with respect to prefers-reduced-motion
+            });
+        });
 
     </script>
-    <button type="button" onclick="alert('make me do stuff later')">I am a Button!</button>
+
+<button type="button" onclick=map.addControl(draw)>Draw Constraint</button>
+
 </body>
 </html>
